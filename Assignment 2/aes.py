@@ -33,8 +33,15 @@ def block_to_matrix(hex_string):
 
     return matrix
 
+def matrix_to_block(matrix):
+    block = ''
+    for col in range(len(matrix)):
+        for row in range(len(matrix)):
+            block += matrix[row][col]
+    return block
+
 def left_shift(matrix, n):
-    shift_matrix = matrix[1:] + [matrix[0]]
+    shift_matrix = matrix[n:] + matrix[:n]
     return shift_matrix
 
 def calc_xor(matrix1, matrix2):
@@ -47,6 +54,19 @@ def calc_xor(matrix1, matrix2):
     # Convert result integers back to hexadecimal
     result_hex = [hex(val)[2:].zfill(2) for val in result_int]
     return result_hex
+
+def calc_xor_2(matrix1, matrix2):
+    result_matrix = []
+    for row_a, row_b in zip(matrix1, matrix2):
+        result_row = []
+        for elem_a, elem_b in zip(row_a, row_b):
+            binary_a = int(elem_a, 16)
+            binary_b = int(elem_b, 16)
+            xor_result = binary_a^binary_b
+            result_row.append(hex(xor_result)[2:].zfill(2))
+        result_matrix.append(result_row)
+    return result_matrix
+
 
 def get_substiitute_matrix(matrix):
     for i in range(len(matrix)): 
@@ -76,35 +96,77 @@ def calc_next_round_key(idx):
     round_keys.append([[row[i] for row in temp_matrix] for i in range(len(temp_matrix))])
 
 def key_expansion(key):
-    round_keys.append(block_to_matrix(key))
+    hex_key = convert_string_to_hex(key)
+    round_keys.append(block_to_matrix(hex_key))
     for i in range(10):
         calc_next_round_key(i)
 
-def perform_aes(plaintext, key):
-    key_expansion(key)
-    # state_matrix = block_to_matrix(plaintext)
-    # round_key = block_to_matrix(key)
+def aes_substitute_matrix(matrix):
+    substitute_matrix = []
+    for i in range(len(matrix)):
+        substitute_matrix.append(get_substiitute_matrix(matrix[i]))
+    return substitute_matrix
 
-    # for row in state_matrix:
-    #     print(row)
-    # print("\n")
-    # for row in round_key:
-    #     print(row)
+def aes_shifted_row_matrix(matrix):
+    shifted_row_matrix = []
+    for i in range(len(matrix)):
+        shifted_row_matrix.append(left_shift(matrix[i], i))
+    return shifted_row_matrix
+
+def aes_mix_cols_matrix(matrix):
+    n = len(matrix)
+    mix_columns_matrix = [[0 for _ in range(n)] for _ in range(n)]
+
+    for i in range(n):
+        for j in range(n):
+            for k in range(n):
+                curr = BitVector(hexstring=matrix[k][j])
+                x = curr.gf_multiply_modular(Mixer[i][k], AES_modulus, 8)
+                mix_columns_matrix[i][j] ^=  x.intValue()
+    
+    for i in range(len(mix_columns_matrix)):
+        for j in range(len(mix_columns_matrix[i])):
+            mix_columns_matrix[i][j] = hex(mix_columns_matrix[i][j])[2:].zfill(2)
+
+    return mix_columns_matrix
+
+def convert_hex_to_string(string):
+    str = bytes.fromhex(string).decode('latin-1')
+    return str
+
+def aes_encryption(plaintext, key):
+    hex_key = convert_string_to_hex(key)
+    hex_plaintext = convert_string_to_hex(plaintext)
+
+    curr_state_matrix = calc_xor_2(block_to_matrix(hex_plaintext), block_to_matrix(hex_key))
+
+    for i in range(9):
+        substitute_matrix = aes_substitute_matrix(curr_state_matrix)
+        shifted_row_matrix = aes_shifted_row_matrix(substitute_matrix)
+        mix_columns_matrix = aes_mix_cols_matrix(shifted_row_matrix)
+        new_state_matrix = calc_xor_2(mix_columns_matrix, round_keys[i+1])
+        curr_state_matrix = new_state_matrix
+
+    
+    substitute_matrix = aes_substitute_matrix(curr_state_matrix)
+    shifted_row_matrix = aes_shifted_row_matrix(substitute_matrix)
+    new_state_matrix = calc_xor_2(shifted_row_matrix, round_keys[10])
+
+    hex_ciphertext = matrix_to_block(new_state_matrix)
+    ciphertext = convert_hex_to_string(hex_ciphertext)
+    print("ciphertext in ascii ", ciphertext)
+    print("ciphertext in hex ", hex_ciphertext)
  
-# key = input("enter your key : ")
-key = "Thats my Kung Fu"
-# print("key : ", key)
-
-hex_key = convert_string_to_hex(key)
-# print("key in hex : ", hex_key)
+key = input("enter your key : ")
+# key = "Thats my Kung Fu"
+print("key in ascii ", key)
+print("key in hex ", convert_string_to_hex(key))
 
  
-# plaintext = input("enter your plaintext : ")
-plaintext = "Two One Nine Two"
-# print("plaintext : ", plaintext)
+plaintext = input("enter your plaintext : ")
+# plaintext = "Two One Nine Two"
+print("plaintext in ascii ", plaintext)
+print("plaintext in hex ", convert_string_to_hex(plaintext))
 
-hex_plaintext = convert_string_to_hex(plaintext)
-# print("plaintext in hex : ", hex_plaintext)
-
-# for i in range(10):
-perform_aes(hex_plaintext, hex_key)
+key_expansion(key)
+aes_encryption(plaintext, key)
