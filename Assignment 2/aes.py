@@ -14,10 +14,28 @@ round_constants = [
     ['1b', '00', '00', '00'],
     ['36', '00', '00', '00'],
 ]
+
+def pkcs7_pad(data, block_size):
+    if(len(data)%block_size==0):
+        return data
+    pad_size = block_size - len(data) % block_size
+    padding = bytes([pad_size] * pad_size)
+    return data + padding
+
+def convert_bytes_to_hex(bytes_object):
+    return bytes_object.hex()
+
 def convert_string_to_hex(str):
     bytes_object = str.encode('utf-8')
-    hex_representation = bytes_object.hex()
-    return hex_representation
+    return convert_bytes_to_hex(bytes_object)
+
+def convert_hex_to_string(hex_string):
+    unicode_code_point = int(hex_string, 16)
+    # Check if the character is a control character
+    if 0 <= unicode_code_point <= 31:
+        return ("\\x{:02x}".format(unicode_code_point))
+    else:
+        return (chr(unicode_code_point))
 
 def block_to_matrix(hex_string):
     chunks = [hex_string[i:i+2] for i in range(0, len(hex_string), 2)]
@@ -35,10 +53,13 @@ def block_to_matrix(hex_string):
 
 def matrix_to_block(matrix):
     block = ''
+    cipher = ''
+
     for col in range(len(matrix)):
         for row in range(len(matrix)):
+            cipher+=(convert_hex_to_string(matrix[row][col]))            
             block += matrix[row][col]
-    return block
+    return block, cipher
 
 def left_shift(matrix, n):
     shift_matrix = matrix[n:] + matrix[:n]
@@ -130,15 +151,13 @@ def aes_mix_cols_matrix(matrix):
 
     return mix_columns_matrix
 
-def convert_hex_to_string(string):
-    str = bytes.fromhex(string).decode('latin-1')
-    return str
 
-def aes_encryption(plaintext, key):
+def perform_aes(plaintext, key):
     hex_key = convert_string_to_hex(key)
-    hex_plaintext = convert_string_to_hex(plaintext)
 
-    curr_state_matrix = calc_xor_2(block_to_matrix(hex_plaintext), block_to_matrix(hex_key))
+    # hex_plaintext = convert_string_to_hex(plaintext)
+
+    curr_state_matrix = calc_xor_2(block_to_matrix(plaintext), block_to_matrix(hex_key))
 
     for i in range(9):
         substitute_matrix = aes_substitute_matrix(curr_state_matrix)
@@ -152,21 +171,40 @@ def aes_encryption(plaintext, key):
     shifted_row_matrix = aes_shifted_row_matrix(substitute_matrix)
     new_state_matrix = calc_xor_2(shifted_row_matrix, round_keys[10])
 
-    hex_ciphertext = matrix_to_block(new_state_matrix)
-    ciphertext = convert_hex_to_string(hex_ciphertext)
-    print("ciphertext in ascii ", ciphertext)
+    hex_ciphertext, ciphertext = matrix_to_block(new_state_matrix)
+    return hex_ciphertext, ciphertext
+
+def aes_encryption(plaintext, key):
+    bytes_data = bytes.fromhex(plaintext)
+    chunks = [bytes_data[i:i+16] for i in range(0, len(bytes_data), 16)]
+    hex_slices = [chunk.hex() for chunk in chunks]
+
+
+    hex_ciphertext = ''
+    ciphertext = ''
+
+    for block in hex_slices:
+        a,b = perform_aes(block, key)
+        hex_ciphertext+=a
+        ciphertext+=b
+    
+
+    print("\nciphertext in ascii ", ciphertext)
     print("ciphertext in hex ", hex_ciphertext)
+
  
-key = input("enter your key : ")
-# key = "Thats my Kung Fu"
-print("key in ascii ", key)
+# key = input("enter your key : ")
+key = "Thats my Kung Fu"
+print("\nkey in ascii ", key)
 print("key in hex ", convert_string_to_hex(key))
 
  
-plaintext = input("enter your plaintext : ")
-# plaintext = "Two One Nine Two"
-print("plaintext in ascii ", plaintext)
+# plaintext = input("enter your plaintext : ")
+plaintext = "Two One Nine Two"
+padded_message = pkcs7_pad(plaintext.encode('utf-8'), 16)
+print("\nplaintext in ascii ", plaintext)
 print("plaintext in hex ", convert_string_to_hex(plaintext))
 
+
 key_expansion(key)
-aes_encryption(plaintext, key)
+aes_encryption(convert_bytes_to_hex(padded_message), key)
