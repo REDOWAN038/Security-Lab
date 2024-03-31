@@ -22,6 +22,15 @@ def pkcs7_pad(data, block_size):
     padding = bytes([pad_size] * pad_size)
     return data + padding
 
+def pkcs7_unpad(data1, data2):
+    pad_size = data1[-1]
+    byte = bytes.fromhex(data2)
+    if pad_size < 1 or pad_size > len(data1):
+        raise ValueError("Invalid padding size")
+    if data1[-pad_size:] != bytes([pad_size] * pad_size):
+        raise ValueError("Invalid padding bytes")
+    return data1[:-pad_size], byte[:-pad_size].hex()
+
 def convert_bytes_to_hex(bytes_object):
     return bytes_object.hex()
 
@@ -65,6 +74,10 @@ def left_shift(matrix, n):
     shift_matrix = matrix[n:] + matrix[:n]
     return shift_matrix
 
+def right_shift(matrix, n):
+    shift_matrix =  matrix[-n:] + matrix[:-n]
+    return shift_matrix
+
 def calc_xor(matrix1, matrix2):
     matrix1_int = [int(hex_val, 16) for hex_val in matrix1]
     matrix2_int = [int(hex_val, 16) for hex_val in matrix2]
@@ -94,6 +107,15 @@ def get_substiitute_matrix(matrix):
         b_bin = BitVector(hexstring=matrix[i])
         b_int = b_bin.intValue()
         s_int = Sbox[b_int]
+        s_bin = BitVector(intVal=s_int, size=8)
+        matrix[i] = s_bin.get_bitvector_in_hex()
+    return matrix
+
+def get_inv_substiitute_matrix(matrix):
+    for i in range(len(matrix)): 
+        b_bin = BitVector(hexstring=matrix[i])
+        b_int = b_bin.intValue()
+        s_int = InvSbox[b_int]
         s_bin = BitVector(intVal=s_int, size=8)
         matrix[i] = s_bin.get_bitvector_in_hex()
     return matrix
@@ -128,11 +150,23 @@ def aes_substitute_matrix(matrix):
         substitute_matrix.append(get_substiitute_matrix(matrix[i]))
     return substitute_matrix
 
+def aes_inv_substitute_matrix(matrix):
+    inv_substitute_matrix = []
+    for i in range(len(matrix)):
+        inv_substitute_matrix.append(get_inv_substiitute_matrix(matrix[i]))
+    return inv_substitute_matrix
+
 def aes_shifted_row_matrix(matrix):
     shifted_row_matrix = []
     for i in range(len(matrix)):
         shifted_row_matrix.append(left_shift(matrix[i], i))
     return shifted_row_matrix
+
+def aes_inv_shifted_row_matrix(matrix):
+    inv_shifted_row_matrix = []
+    for i in range(len(matrix)):
+        inv_shifted_row_matrix.append(right_shift(matrix[i], i))
+    return inv_shifted_row_matrix
 
 def aes_mix_cols_matrix(matrix):
     n = len(matrix)
@@ -152,12 +186,27 @@ def aes_mix_cols_matrix(matrix):
     return mix_columns_matrix
 
 
-def perform_aes(plaintext, key):
-    hex_key = convert_string_to_hex(key)
+def aes_inv_mix_cols_matrix(matrix):
+    n = len(matrix)
+    inv_mix_columns_matrix = [[0 for _ in range(n)] for _ in range(n)]
 
-    # hex_plaintext = convert_string_to_hex(plaintext)
+    for i in range(n):
+        for j in range(n):
+            for k in range(n):
+                curr = BitVector(hexstring=matrix[k][j])
+                x = curr.gf_multiply_modular(InvMixer[i][k], AES_modulus, 8)
+                inv_mix_columns_matrix[i][j] ^=  x.intValue()
+    
+    for i in range(len(inv_mix_columns_matrix)):
+        for j in range(len(inv_mix_columns_matrix[i])):
+            inv_mix_columns_matrix[i][j] = hex(inv_mix_columns_matrix[i][j])[2:].zfill(2)
 
-    curr_state_matrix = calc_xor_2(block_to_matrix(plaintext), block_to_matrix(hex_key))
+    return inv_mix_columns_matrix
+
+
+def perform_aes_encryption(hex_plaintext):
+
+    curr_state_matrix = calc_xor_2(block_to_matrix(hex_plaintext), round_keys[0])
 
     for i in range(9):
         substitute_matrix = aes_substitute_matrix(curr_state_matrix)
@@ -174,8 +223,8 @@ def perform_aes(plaintext, key):
     hex_ciphertext, ciphertext = matrix_to_block(new_state_matrix)
     return hex_ciphertext, ciphertext
 
-def aes_encryption(plaintext, key):
-    bytes_data = bytes.fromhex(plaintext)
+def aes_encryption(hex_plaintext):
+    bytes_data = bytes.fromhex(hex_plaintext)
     chunks = [bytes_data[i:i+16] for i in range(0, len(bytes_data), 16)]
     hex_slices = [chunk.hex() for chunk in chunks]
 
@@ -184,27 +233,74 @@ def aes_encryption(plaintext, key):
     ciphertext = ''
 
     for block in hex_slices:
-        a,b = perform_aes(block, key)
+        a,b = perform_aes_encryption(block)
         hex_ciphertext+=a
         ciphertext+=b
     
+    return ciphertext, hex_ciphertext
 
-    print("\nciphertext in ascii ", ciphertext)
-    print("ciphertext in hex ", hex_ciphertext)
+def perform_aes_decryption(hex_ciphertext):
+    curr_state_matrix = calc_xor_2(block_to_matrix(hex_ciphertext), round_keys[10])
+
+    for i in range(9):
+        inv_shifted_row_matrix = aes_inv_shifted_row_matrix(curr_state_matrix)
+        inv_substitute_matrix = aes_inv_substitute_matrix(inv_shifted_row_matrix)
+        new_state_matrix = calc_xor_2(inv_substitute_matrix, round_keys[10-i-1])
+        inv_mix_columns_matrix = aes_inv_mix_cols_matrix(new_state_matrix)
+        curr_state_matrix = inv_mix_columns_matrix
+    
+    inv_shifted_row_matrix = aes_inv_shifted_row_matrix(curr_state_matrix)
+    inv_substitute_matrix = aes_inv_substitute_matrix(inv_shifted_row_matrix)
+    new_state_matrix = calc_xor_2(inv_substitute_matrix, round_keys[0])
+
+    hex_plaintext, plaintext = matrix_to_block(new_state_matrix)
+    return hex_plaintext, plaintext
+
+def aes_decryption(hex_ciphertext):
+    bytes_data = bytes.fromhex(hex_ciphertext)
+    chunks = [bytes_data[i:i+16] for i in range(0, len(bytes_data), 16)]
+    hex_slices = [chunk.hex() for chunk in chunks]
+
+
+    hex_plaintext = ''
+    plaintext = ''
+
+    for block in hex_slices:
+        a,b = perform_aes_decryption(block)
+        hex_plaintext+=a
+        plaintext+=b
+    
+    return plaintext, hex_plaintext
+    # return pkcs7_unpad(plaintext.encode('utf-8'), hex_plaintext)
 
  
 # key = input("enter your key : ")
-key = "Thats my Kung Fu"
+key = "BUETCSEVSSUSTCSE"
 print("\nkey in ascii ", key)
 print("key in hex ", convert_string_to_hex(key))
 
  
 # plaintext = input("enter your plaintext : ")
-plaintext = "Two One Nine Two"
+plaintext = "BUETnightfallVsSUSTguessforce"
 padded_message = pkcs7_pad(plaintext.encode('utf-8'), 16)
 print("\nplaintext in ascii ", plaintext)
 print("plaintext in hex ", convert_string_to_hex(plaintext))
 
 
 key_expansion(key)
-aes_encryption(convert_bytes_to_hex(padded_message), key)
+ciphertext, hex_ciphertext = aes_encryption(convert_bytes_to_hex(padded_message))
+
+print("\nciphertext in ascii ", ciphertext)
+print("ciphertext in hex ", hex_ciphertext)
+
+plaintext, hex_plaintext = aes_decryption(hex_ciphertext)
+
+
+print("\nplaintext in ascii ", plaintext)
+print("plaintext in hex ", hex_plaintext)
+
+# a,b = pkcs7_unpad(plaintext.encode('utf-8'), hex_plaintext)
+
+# print("\na : ", a.decode('utf-8'))
+# print("\na : ", b)
+
