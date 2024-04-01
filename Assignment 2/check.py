@@ -21,3 +21,15 @@ print("Decrypted data without padding:", decrypted_data.decode('utf-8'))
 print("Decrypted data without padding:", decrypted_data_hex)
 
 print(type(encrypted_data))
+
+# Thats my Kung Fu
+# Two One Nine Two
+
+# SUST CSE19 Batch
+# IsTheirCarnivalSuccessful
+
+# SUST CSE19 Batch
+# YesTheyHaveMadeItAtLast
+
+# BUETCSEVSSUSTCSE
+# BUETnightfallVsSUSTguessforce

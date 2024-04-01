@@ -15,6 +15,16 @@ round_constants = [
     ['36', '00', '00', '00'],
 ]
 
+def process_aes_key(key):
+    sz = len(key)
+
+    if sz==16:
+        return key
+    elif sz>16:
+        return key[:16]
+    else:
+        return key.ljust(16, 'X')
+
 def pkcs7_pad(data, block_size):
     if(len(data)%block_size==0):
         return data
@@ -23,13 +33,16 @@ def pkcs7_pad(data, block_size):
     return data + padding
 
 def pkcs7_unpad(data1, data2):
-    pad_size = data1[-1]
+    if(not(data1[-1]>=48 and data1[-1]<=57)):
+        return data1, data2
+        
+    pad_size = int(chr(data1[-1]))
     byte = bytes.fromhex(data2)
     if pad_size < 1 or pad_size > len(data1):
         raise ValueError("Invalid padding size")
-    if data1[-pad_size:] != bytes([pad_size] * pad_size):
-        raise ValueError("Invalid padding bytes")
-    return data1[:-pad_size], byte[:-pad_size].hex()
+    # if data1[-(pad_size*4):] != bytes([pad_size] * pad_size):
+    #     raise ValueError("Invalid padding bytes")
+    return data1[:-(pad_size*4)], byte[:-pad_size].hex()
 
 def convert_bytes_to_hex(bytes_object):
     return bytes_object.hex()
@@ -270,18 +283,21 @@ def aes_decryption(hex_ciphertext):
         hex_plaintext+=a
         plaintext+=b
     
-    return plaintext, hex_plaintext
-    # return pkcs7_unpad(plaintext.encode('utf-8'), hex_plaintext)
+    plaintext, hex_plaintext = pkcs7_unpad(plaintext.encode('utf-8'), hex_plaintext)
+    return plaintext.decode('utf-8'), hex_plaintext
 
  
-# key = input("enter your key : ")
-key = "BUETCSEVSSUSTCSE"
+key = input("\nenter your key : ")
+key = process_aes_key(key)
+plaintext = input("enter your plaintext : ")
+
+
+# key = "BUETCSEVSSUSTCSE"
 print("\nkey in ascii ", key)
 print("key in hex ", convert_string_to_hex(key))
 
  
-# plaintext = input("enter your plaintext : ")
-plaintext = "BUETnightfallVsSUSTguessforce"
+# plaintext = "BUETnightfallVsSUSTguessforce"
 padded_message = pkcs7_pad(plaintext.encode('utf-8'), 16)
 print("\nplaintext in ascii ", plaintext)
 print("plaintext in hex ", convert_string_to_hex(plaintext))
@@ -298,9 +314,4 @@ plaintext, hex_plaintext = aes_decryption(hex_ciphertext)
 
 print("\nplaintext in ascii ", plaintext)
 print("plaintext in hex ", hex_plaintext)
-
-# a,b = pkcs7_unpad(plaintext.encode('utf-8'), hex_plaintext)
-
-# print("\na : ", a.decode('utf-8'))
-# print("\na : ", b)
-
+print("\n")
