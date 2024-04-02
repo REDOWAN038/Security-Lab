@@ -52,12 +52,16 @@ def convert_string_to_hex(str):
     return convert_bytes_to_hex(bytes_object)
 
 def convert_hex_to_string(hex_string):
-    unicode_code_point = int(hex_string, 16)
-    # Check if the character is a control character
-    if 0 <= unicode_code_point <= 31:
-        return ("\\x{:02x}".format(unicode_code_point))
-    else:
-        return (chr(unicode_code_point))
+    decimal_value = int(hex_string, 16)
+    unicode_character = chr(decimal_value)
+    return unicode_character
+
+    # unicode_code_point = int(hex_string, 16)
+    # # Check if the character is a control character
+    # if 0 <= unicode_code_point <= 31:
+    #     return ("\\x{:02x}".format(unicode_code_point))
+    # else:
+    #     return (chr(unicode_code_point))
 
 def block_to_matrix(hex_string):
     chunks = [hex_string[i:i+2] for i in range(0, len(hex_string), 2)]

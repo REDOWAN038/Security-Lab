@@ -1,35 +1,54 @@
-def pkcs7_unpad(data1, data2):
-    pad_size = data1[-1]
-    print("\nsz : ", pad_size)
-    print(type(pad_size))
-    byte = bytes.fromhex(data2)
-    print("\nb : ", byte)
-    if pad_size < 1 or pad_size > len(data1):
-        raise ValueError("Invalid padding size")
-    if data1[-pad_size:] != bytes([pad_size] * pad_size):
-        raise ValueError("Invalid padding bytes")
-    return data1[:-pad_size], byte[:-pad_size].hex()
+import random
 
-# Example usage:
-encrypted_data = 'BUETnightfallVsSUSTguessforce\x03\x03\x03'
-encrypted_data_hex = '425545546e6967687466616c6c5673535553546775657373666f726365030303'
+def calc_r_m(n):
+    i=1
 
-decrypted_data, decrypted_data_hex = pkcs7_unpad(encrypted_data.encode('utf-8'), encrypted_data_hex)
-# decrypted_data_hex = pkcs7_unpad_hex()
+    while True:
+        val = n/pow(2, i)
+        if(val.is_integer()):
+            i+=1
+        else:
+            return i-1, int(n/pow(2, i-1))
+        
+def calc_prime(a, m, n):
+    x = pow(a, m, n)
+ 
+    if (x == 1 or x == n - 1):
+        return True
+ 
+    while (m != n - 1):
+        x = (x * x) % n
+        m *= 2
+ 
+        if (x == 1):
+            return False
+        if (x == n - 1):
+            return True
+ 
+    return False
 
-print("Decrypted data without padding:", decrypted_data.decode('utf-8'))
-print("Decrypted data without padding:", decrypted_data_hex)
 
-print(type(encrypted_data))
+def isPrime(n, k):
+    if n<=1:
+        return False
+    if n<=3:
+        return True
+    if n%2==0:
+        return False
+    
+    
+    r,m = calc_r_m(n-1)
+    a = 2 + random.randint(1, n - 4)
+    res = calc_prime(a, m, n)
+    d = n - 1
+    while (d % 2 == 0):
+        d //= 2
 
-# Thats my Kung Fu
-# Two One Nine Two
+    print("r ", r)
+    print("m ", m)
+    print("d ", d)
+    return res
 
-# SUST CSE19 Batch
-# IsTheirCarnivalSuccessful
+print(isPrime(56999, 5))
 
-# SUST CSE19 Batch
-# YesTheyHaveMadeItAtLast
-
-# BUETCSEVSSUSTCSE
-# BUETnightfallVsSUSTguessforce
+# Prime Numbers: (6079, 56999)
