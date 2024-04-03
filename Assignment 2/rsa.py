@@ -1,6 +1,11 @@
 import random
 import time
 
+BOLD = "\033[1m"
+UNDERLINE = "\033[4m"
+RESET_FORMATTING = "\033[0m"
+
+
 def calc_r_m(n):
     i=1
     while True:
@@ -50,7 +55,7 @@ def miller_rabin(n, k=5):
 def generate_prime(bits):
     while True:
         num = random.getrandbits(bits)
-        if miller_rabin(num):
+        if len(bin(num)[2:]) == bits and miller_rabin(num):
             return num
         
 # Function to calculate the greatest common divisor
@@ -130,14 +135,28 @@ def performance_report(K, plaintext):
     decrypted_text = decrypt(ciphertext, private_key)
     decryption_time = time.time() - start_time
 
-    print(f"Key Generation Time for K={K}: {key_generation_time} seconds")
-    print(f"Encryption Time for K={K}: {encryption_time} seconds")
-    print(f"Decryption Time for K={K}: {decryption_time} seconds")
-    print(f"Public Key (e, n): {public_key}")
-    print(f"Private Key (d, n): {private_key}")
-    print(f"Original Text: {plaintext}")
-    print(f"Encrypted Test (ASCII): {ciphertext}")
-    print(f"Decrypted Text: {decrypted_text}")
+
+    print(BOLD + UNDERLINE + "\nPublic Key : " + RESET_FORMATTING, end='')
+    print(f"(e, n): {public_key}")
+
+    print(BOLD + UNDERLINE + "Private Key : " + RESET_FORMATTING, end='')
+    print(f"(d, n): {private_key}")
+
+    print(BOLD + UNDERLINE + "\nPlain Text : " + RESET_FORMATTING)    
+    print(plaintext)
+    
+    print(BOLD + UNDERLINE + "\nEncrypted Test (ASCII) : " + RESET_FORMATTING)    
+    print(ciphertext)
+
+    print(BOLD + UNDERLINE + "\nDecrypted Text : " + RESET_FORMATTING)    
+    print(decrypted_text)
+
+    print(BOLD + UNDERLINE + "\nExecution Time : " + RESET_FORMATTING)  
+    print(f"Key Generation Time : {key_generation_time} seconds")
+    print(f"Encryption Time : {encryption_time} seconds")
+    print(f"Decryption Time : {decryption_time} seconds")
+  
+
 
 # Main function
 if __name__ == "__main__":
