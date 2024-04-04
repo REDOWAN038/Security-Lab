@@ -1,0 +1,9 @@
+{
+	"editor.defaultFoldingRangeProvider": "esbenp.prettier-vscode",
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"prettier.semi": false,
+	"prettier.tabWidth": 4,
+	"prettier.useTabs": true,
+	"editor.formatOnSave": true,
+	"notebook.formatOnSave.enabled": true
+}
