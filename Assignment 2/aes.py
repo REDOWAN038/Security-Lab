@@ -33,23 +33,31 @@ def pkcs7_pad(data, block_size):
     return data + padding
 
 def pkcs7_unpad(data1, data2):
-    if(not(data1[-1]>=48 and data1[-1]<=57)):
+    pad_size = int(data1[-1])
+
+    if(not(pad_size>=48 and pad_size<=57)):
         return data1, data2
         
-    pad_size = int(chr(data1[-1]))
-    byte = bytes.fromhex(data2)
-    if pad_size < 1 or pad_size > len(data1):
-        raise ValueError("Invalid padding size")
+    # byte = bytes.fromhex(data2)
+    # if pad_size < 1 or pad_size > len(data1):
+    #     raise ValueError("Invalid padding size")
     # if data1[-(pad_size*4):] != bytes([pad_size] * pad_size):
     #     raise ValueError("Invalid padding bytes")
-    return data1[:-(pad_size*4)], byte[:-pad_size].hex()
+    return data1[:-(pad_size)], data2[:-(pad_size*2)]
 
 def convert_bytes_to_hex(bytes_object):
     return bytes_object.hex()
 
 def convert_string_to_hex(str):
-    bytes_object = str.encode('utf-8')
-    return convert_bytes_to_hex(bytes_object)
+    hex_representation = ""
+    for char in str:
+        hex_char = hex(ord(char))[2:]
+        if len(hex_char) == 1:
+            hex_char = '0' + hex_char
+        hex_representation += hex_char
+    return hex_representation
+    # bytes_object = str.encode('utf-8')
+    # return convert_bytes_to_hex(bytes_object)
 
 def convert_hex_to_string(hex_string):
     decimal_value = int(hex_string, 16)
@@ -117,7 +125,6 @@ def calc_xor_2(matrix1, matrix2):
             result_row.append(hex(xor_result)[2:].zfill(2))
         result_matrix.append(result_row)
     return result_matrix
-
 
 def get_substiitute_matrix(matrix):
     for i in range(len(matrix)): 
@@ -202,7 +209,6 @@ def aes_mix_cols_matrix(matrix):
 
     return mix_columns_matrix
 
-
 def aes_inv_mix_cols_matrix(matrix):
     n = len(matrix)
     inv_mix_columns_matrix = [[0 for _ in range(n)] for _ in range(n)]
@@ -219,7 +225,6 @@ def aes_inv_mix_cols_matrix(matrix):
             inv_mix_columns_matrix[i][j] = hex(inv_mix_columns_matrix[i][j])[2:].zfill(2)
 
     return inv_mix_columns_matrix
-
 
 def perform_aes_encryption(hex_plaintext):
 
@@ -291,17 +296,20 @@ def aes_decryption(hex_ciphertext):
     return plaintext.decode('utf-8'), hex_plaintext
 
  
-key = input("\nenter your key : ")
+
+key = "Thats my Kung Fu"
+plaintext = "Two One Nine Two"
+
+
+# key = input("\nenter your key : ")
 key = process_aes_key(key)
-plaintext = input("enter your plaintext : ")
+# plaintext = input("enter your plaintext : ")
 
 
-# key = "BUETCSEVSSUSTCSE"
 print("\nkey in ascii ", key)
 print("key in hex ", convert_string_to_hex(key))
 
  
-# plaintext = "BUETnightfallVsSUSTguessforce"
 padded_message = pkcs7_pad(plaintext.encode('utf-8'), 16)
 print("\nplaintext in ascii ", plaintext)
 print("plaintext in hex ", convert_string_to_hex(plaintext))
