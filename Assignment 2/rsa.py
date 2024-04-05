@@ -50,21 +50,17 @@ def miller_rabin(n, k=5):
             return False
     return True
 
-
-# Function to generate a prime number of given bits using trial division
 def generate_prime(bits):
     while True:
         num = random.getrandbits(bits)
         if len(bin(num)[2:]) == bits and miller_rabin(num):
             return num
         
-# Function to calculate the greatest common divisor
 def gcd(a, b):
     while b != 0:
         a, b = b, a % b
     return a
 
-# Function to calculate the modular inverse
 def mod_inverse(a, m):
     m0, x0, x1 = m, 0, 1
     while a > 1:
@@ -73,7 +69,6 @@ def mod_inverse(a, m):
         x0, x1 = x1 - q * x0, x0
     return x1 + m0
 
-# Function to generate key pairs
 def generate_key_pairs(K):
     p = generate_prime(K//2)
     q = generate_prime(K//2)
@@ -81,7 +76,7 @@ def generate_key_pairs(K):
     while p == q:
         q = generate_prime(K//2)
 
-    print(f"Prime Numbers: {p, q}")
+    # print(f"Prime Numbers: {p, q}")
 
     n = p * q
     phi = (p - 1) * (q - 1)
@@ -96,7 +91,6 @@ def generate_key_pairs(K):
 
     return ((e, n), (d, n))
 
-# Function to encrypt plaintext
 def encrypt(plaintext, public_key):
     e, n = public_key
     ciphertext = []
@@ -108,7 +102,6 @@ def encrypt(plaintext, public_key):
         
     return ciphertext
 
-# Function to decrypt ciphertext
 def decrypt(ciphertext, private_key):
     d, n = private_key
     plaintext = ""
@@ -121,10 +114,13 @@ def decrypt(ciphertext, private_key):
     return plaintext
 
 
-# Performance report function
-def performance_report(K, plaintext):
+# Main function
+if __name__ == "__main__":
+    k = int(input("\nBit Size : "))
+    plaintext = input("Plaintext : ")
+    
     start_time = time.time()
-    public_key, private_key = generate_key_pairs(K)
+    public_key, private_key = generate_key_pairs(k)
     key_generation_time = time.time() - start_time
 
     start_time = time.time()
@@ -155,13 +151,3 @@ def performance_report(K, plaintext):
     print(f"Key Generation Time : {key_generation_time} seconds")
     print(f"Encryption Time : {encryption_time} seconds")
     print(f"Decryption Time : {decryption_time} seconds")
-  
-
-
-# Main function
-if __name__ == "__main__":
-    # key_lengths = [16, 32, 64, 96]
-    # for K in key_lengths:
-    k = int(input("\nBit Size : "))
-    plaintext = input("Plaintext : ")
-    performance_report(k, plaintext)
