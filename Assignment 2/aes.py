@@ -1,6 +1,11 @@
 import time
 from BitVector_Helper import *
 
+
+BOLD = "\033[1m"
+UNDERLINE = "\033[4m"
+RESET_FORMATTING = "\033[0m"
+
 round_keys = []
 round_constants = [
     ['01', '00', '00', '00'],
@@ -35,7 +40,7 @@ def pkcs7_pad(data, block_size):
 def pkcs7_unpad(data1, data2):
     pad_size = int(data1[-1])
 
-    if(not(pad_size>=48 and pad_size<=57)):
+    if(not(pad_size>=1 and pad_size<=16)):
         return data1, data2
         
     # byte = bytes.fromhex(data2)
@@ -163,6 +168,7 @@ def calc_next_round_key(idx):
     round_keys.append([[row[i] for row in temp_matrix] for i in range(len(temp_matrix))])
 
 def key_expansion(key):
+    round_keys.clear()
     hex_key = convert_string_to_hex(key)
     round_keys.append(block_to_matrix(hex_key))
     for i in range(10):
@@ -278,7 +284,8 @@ def perform_aes_decryption(hex_ciphertext):
     hex_plaintext, plaintext = matrix_to_block(new_state_matrix)
     return hex_plaintext, plaintext
 
-def aes_decryption(hex_ciphertext):
+def aes_decryption(ciphertext):
+    hex_ciphertext = convert_string_to_hex(ciphertext)
     bytes_data = bytes.fromhex(hex_ciphertext)
     chunks = [bytes_data[i:i+16] for i in range(0, len(bytes_data), 16)]
     hex_slices = [chunk.hex() for chunk in chunks]
@@ -296,34 +303,52 @@ def aes_decryption(hex_ciphertext):
     return plaintext.decode('utf-8'), hex_plaintext
 
  
-
-key = "Thats my Kung Fu"
-plaintext = "Two One Nine Two"
-
-
-# key = input("\nenter your key : ")
-key = process_aes_key(key)
-# plaintext = input("enter your plaintext : ")
+if __name__=="__main__":
+    key = "Two One Nine Two"
+    plaintext = "Hello World"
 
 
-print("\nkey in ascii ", key)
-print("key in hex ", convert_string_to_hex(key))
+    # key = input("\nenter your key : ")
+    start_time = time.time()
+    processed_key = process_aes_key(key)
+    key_expansion(processed_key)
+    key_scheduling_time = time.time() - start_time
+    
+    
+    # plaintext = input("enter your plaintext : ")
+    start_time = time.time()
+    padded_message = pkcs7_pad(plaintext.encode('utf-8'), 16)
+    ciphertext, hex_ciphertext = aes_encryption(convert_bytes_to_hex(padded_message))
+    encryption_time = time.time() - start_time
+    
 
- 
-padded_message = pkcs7_pad(plaintext.encode('utf-8'), 16)
-print("\nplaintext in ascii ", plaintext)
-print("plaintext in hex ", convert_string_to_hex(plaintext))
+    start_time = time.time()
+    deciphertext, hex_deciphertext = aes_decryption(ciphertext)
+    decryption_time = time.time() - start_time
 
 
-key_expansion(key)
-ciphertext, hex_ciphertext = aes_encryption(convert_bytes_to_hex(padded_message))
+    print(BOLD + UNDERLINE + "\nKey : \n" + RESET_FORMATTING)
+    print("In ASCII : ", key)
+    print("In HEX : ", convert_string_to_hex(key))
 
-print("\nciphertext in ascii ", ciphertext)
-print("ciphertext in hex ", hex_ciphertext)
+    print(BOLD + UNDERLINE + "\nPlain Text : \n" + RESET_FORMATTING)
+    print("In ASCII : ", plaintext)
+    print("In HEX : ", convert_string_to_hex(plaintext))
 
-plaintext, hex_plaintext = aes_decryption(hex_ciphertext)
+    print(BOLD + UNDERLINE + "\nCipher Text : \n" + RESET_FORMATTING)
+    print("In ASCII : ", ciphertext)
+    print("In HEX : ", hex_ciphertext)
+
+    print(BOLD + UNDERLINE + "\nDecipher Text : \n" + RESET_FORMATTING)
+    print("In ASCII : ", deciphertext)
+    print("In HEX : ", hex_deciphertext)
+
+    print(BOLD + UNDERLINE + "\nExecution Time : \n" + RESET_FORMATTING)
+    print(f"Key Scheduling : {key_scheduling_time} sec")
+    print(f"Encryption Time : {encryption_time} sec")
+    print(f"Decryption Time : {decryption_time} sec\n")
 
 
-print("\nplaintext in ascii ", plaintext)
-print("plaintext in hex ", hex_plaintext)
-print("\n")
+
+
+

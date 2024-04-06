@@ -14,12 +14,11 @@ async def receive_data(websocket):
 
     keycipher = json.loads(keycipher.decode())
     private_key = json.loads(private_key)
-    hex_ciphertext = aes.convert_string_to_hex(ciphertext)
 
     key = rsa.decrypt(keycipher, private_key)
     key = aes.process_aes_key(key)
     aes.key_expansion(key)
-    plaintext, _ = aes.aes_decryption(hex_ciphertext)
+    plaintext, _ = aes.aes_decryption(ciphertext)
     
     with open("Don't Open This/DPT.txt", "w") as f:
         f.write(plaintext)
